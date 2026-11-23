@@ -263,7 +263,21 @@ def _add_channel(it,title):
             k_type="checkbox"
         elif k_split[-1].endswith('model'):
             k_type='select'
-            choices=settings.get(k,'').split(',')
+            # settings 里只有部分 *_model 有列表；TTS 的 *_ttsmodel / *_tts_model 在 constants 中，需回退查找
+            choices=[c.strip() for c in str(settings.get(k,'') or '').split(',') if c.strip()]
+            if not choices:
+                _pre=k[:-len('model')].rstrip('_')            # gemini_tts / openrouter_tts / openaitts ...
+                _pre=_pre.upper()
+                _cands=[_pre+'_MODELS']
+                if not _pre.endswith('_TTS'):
+                    _cands.append(_pre+'_TTS_MODELS')
+                if _pre.endswith('TTS') and '_' not in _pre[-4:]:
+                    _cands.append(_pre[:-3]+'_TTS_MODELS')
+                for _c in _cands:
+                    choices=[c.strip() for c in str(getattr(constants,_c,'') or '').split(',') if c.strip()]
+                    if choices:break
+            if isinstance(v,str) and v and v not in choices:
+                choices.insert(0,v)
         elif k=='gptsovits_role':
             k_type="textarea"
         elif isinstance(v,int|float):
